@@ -126,6 +126,8 @@ def xyz2cyl(rvec):
     rcyl[:, 1] = phi
     rcyl = np.reshape(rcyl, rvec_shape)
     return rcyl
+
+
 # TODO rename variable
 def cyl2xyz(rcyl):
     """
