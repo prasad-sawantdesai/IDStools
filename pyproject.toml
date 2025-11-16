@@ -114,7 +114,7 @@ docs = [
     "setuptools-scm",
 ]
 
-test = ["pytest"]
+test = ["pytest", "pytest-cov", "pytest-xdist"]
 
 
 [tool.black]
