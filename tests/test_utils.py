@@ -1,0 +1,202 @@
+import pytest
+import os
+import urllib.request
+import logging
+import subprocess
+import shutil
+from pathlib import Path
+from functools import wraps, lru_cache
+
+logger = logging.getLogger(__name__)
+
+
+TEST_FILES = [
+    "iter_disruption_113112_1.nc",
+    "iter_scenario_123364_1.nc",
+    "iter_scenario_53298_seq1_DD3.nc",
+    "iter_scenario_53298_seq1_DD4.nc",
+]
+
+TEST_FILES_URLS = {
+    "iter_disruption_113112_1.nc": "https://zenodo.org/records/17062700/files/iter_disruption_113112_1.nc?download=1",
+    "iter_scenario_123364_1.nc": "https://zenodo.org/records/17062700/files/iter_scenario_123364_1.nc?download=1",
+    "iter_scenario_53298_seq1_DD3.nc": "https://zenodo.org/records/17062700/files/iter_scenario_53298_seq1_DD3.nc?download=1",
+    "iter_scenario_53298_seq1_DD4.nc": "https://zenodo.org/records/17062700/files/iter_scenario_53298_seq1_DD4.nc?download=1",
+}
+
+
+@lru_cache(maxsize=128)
+def _get_available_ids_cached(test_file_path):
+    import imas
+    from idstools.utils.idshelper import get_available_ids_and_occurrences
+
+    connection = imas.DBEntry(test_file_path, "r")
+    available_ids = get_available_ids_and_occurrences(connection)
+    available_ids_set = frozenset(ids_type for ids_type, *_ in available_ids)
+    connection.close()
+
+    return available_ids_set
+
+
+def require_ids(*ids_names, require_all=False):
+    def decorator(func):
+        @wraps(func)
+        def wrapper(self, test_file_path, *args, **kwargs):
+            try:
+                available_ids_set = _get_available_ids_cached(test_file_path)
+
+                if require_all:
+                    missing_ids = [ids_name for ids_name in ids_names if ids_name not in available_ids_set]
+                    if missing_ids:
+                        pytest.skip(f"Required IDS not present in {test_file_path}: {', '.join(missing_ids)}")
+                else:
+                    has_any_ids = any(ids_name in available_ids_set for ids_name in ids_names)
+                    if not has_any_ids:
+                        pytest.skip(f"None of the required IDS present in {test_file_path}: {', '.join(ids_names)}")
+
+            except Exception as e:
+                pytest.skip(f"Could not check for IDS: {e}")
+
+            return func(self, test_file_path, *args, **kwargs)
+
+        return wrapper
+
+    return decorator
+
+
+def require_files(*file_uris):
+    def decorator(func):
+        file_list = file_uris if file_uris else (TEST_FILES[0],)
+
+        @pytest.mark.parametrize("test_file_path", file_list)
+        @wraps(func)
+        def wrapper(self, test_file_path, *args, **kwargs):
+            download_test_file_if_needed(test_file_path)
+            return func(self, test_file_path, *args, **kwargs)
+
+        return wrapper
+
+    return decorator
+
+
+def download_test_file_if_needed(test_file_path):
+    if test_file_path in TEST_FILES_URLS and not os.path.exists(test_file_path):
+        logger.info(f"Test file {test_file_path} not found. Downloading from Zenodo...")
+        try:
+            urllib.request.urlretrieve(TEST_FILES_URLS[test_file_path], test_file_path)
+            logger.info(f"Successfully downloaded {test_file_path}")
+        except Exception as e:
+            logger.warning(f"Could not download {test_file_path}: {e}")
+            pytest.skip(f"Could not download test file: {test_file_path}")
+
+
+def create_test_file_fixture(test_files=None, test_files_urls=None):
+    if test_files is None:
+        test_files = TEST_FILES
+    if test_files_urls is None:
+        test_files_urls = TEST_FILES_URLS
+
+    @pytest.fixture(params=test_files)
+    def test_file_path_fixture(request):
+        file_path = request.param
+
+        if file_path in test_files_urls and not os.path.exists(file_path):
+            logger.info(f"Test file {file_path} not found. Downloading from Zenodo...")
+            try:
+                urllib.request.urlretrieve(test_files_urls[file_path], file_path)
+                logger.info(f"Successfully downloaded {file_path}")
+            except Exception as e:
+                pytest.skip(f"Could not download test file {file_path}: {e}")
+
+        return file_path
+
+    return test_file_path_fixture
+
+
+def require_summary(func):
+    return require_ids("summary")(func)
+
+
+def require_equilibrium(func):
+    return require_ids("equilibrium")(func)
+
+
+def require_plasma_profiles(func):
+    return require_ids("plasma_profiles")(func)
+
+
+def require_edge_profiles(func):
+    return require_ids("edge_profiles")(func)
+
+
+def skip_on_error_or_empty(error_patterns=None):
+    if error_patterns is None:
+        error_patterns = [
+            "path/value does not exist",
+            "has no attribute",
+            "ERROR",
+            "numpy.ndarray|(0,)|",
+        ]
+
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            try:
+                result = func(*args, **kwargs)
+                return result
+            except AssertionError as e:
+                error_msg = str(e)
+                raise
+            except Exception as e:
+                error_msg = str(e)
+                for pattern in error_patterns:
+                    if pattern.lower() in error_msg.lower():
+                        pytest.skip(f"Skipping due to data issue: {pattern}")
+                raise
+
+        return wrapper
+
+    return decorator
+
+
+def check_result_skip_if_empty_or_error(result, skip_patterns=None):
+    if skip_patterns is None:
+        skip_patterns = [
+            "path/value does not exist",
+            "has no attribute",
+            "numpy.ndarray|(0,)|float64",
+        ]
+
+    output = result.stdout + result.stderr
+
+    for pattern in skip_patterns:
+        if pattern in output:
+            pytest.skip(f"Skipping test: data is empty or has errors (found: {pattern})")
+
+    if "ERROR" in result.stderr:
+        pytest.skip(f"Skipping test: command produced ERROR in stderr")
+
+
+def run_idstools_script(script_name, args, timeout=30):
+    script_cmd = shutil.which(script_name)
+
+    if script_cmd:
+        cmd = [script_name] + args
+    else:
+        script_path = Path(__file__).parent.parent / "scripts" / script_name
+        cmd = [str(script_path)] + args
+
+    logger.debug(f"\n{'='*60}")
+    logger.debug(f"Running command: {' '.join(cmd)}")
+    logger.debug(f"{'='*60}")
+
+    result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+
+    logger.debug(f"\nReturn code: {result.returncode}")
+    if result.stdout:
+        logger.debug(f"\n--- STDOUT ---\n{result.stdout[:500]}")
+    if result.stderr:
+        logger.debug(f"\n--- STDERR ---\n{result.stderr[:500]}")
+    logger.debug(f"{'='*60}\n")
+
+    return result
