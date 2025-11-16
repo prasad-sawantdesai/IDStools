@@ -47,8 +47,10 @@ classifiers = [
 dependencies = [
     "cerberus",
     "fortranformat",
+    "h5py",
     "imas-python",
     "matplotlib",
+    "netCDF4",
     "numpy",
     "packaging",
     "pandas",
