@@ -120,12 +120,12 @@ def xyz2cyl(rvec):
     r = np.sqrt(rcyl[:, 0] ** 2 + rcyl[:, 1] ** 2)
     phi = np.arctan2(rcyl[:, 1], rcyl[:, 0], dtype=np.double)
     ind_phi = np.where(phi < 0.0)[0]
-        if ind_phi.shape[0] > 0:
-            phi[ind_phi] = phi[ind_phi] + 2 * np.pi
-        rcyl[:, 0] = r
-        rcyl[:, 1] = phi
-        rcyl = np.reshape(rcyl, rvec_shape)
-        return rcyl
+    if ind_phi.shape[0] > 0:
+        phi[ind_phi] = phi[ind_phi] + 2 * np.pi
+    rcyl[:, 0] = r
+    rcyl[:, 1] = phi
+    rcyl = np.reshape(rcyl, rvec_shape)
+    return rcyl
 # TODO rename variable
 def cyl2xyz(rcyl):
     """
