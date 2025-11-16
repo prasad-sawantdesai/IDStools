@@ -252,10 +252,10 @@ class ScenarioDescription:
 
             parent_dir = os.path.dirname(self.yaml_path)
             if os.path.basename(parent_dir) == "0":
-                yaml_file_name = parent_dir + f'/ids_{pulsec}{str(runc).rjust(4,"0")}.yaml'
+                yaml_file_name = parent_dir + f'/ids_{pulsec}{str(runc).rjust(4, "0")}.yaml'
             else:
                 grandparent_dir = os.path.dirname(os.path.dirname(parent_dir))
-                yaml_file_name = grandparent_dir + f'/{pulsec}/{runc}/ids_{pulsec}{str(runc).rjust(4,"0")}.yaml'
+                yaml_file_name = grandparent_dir + f'/{pulsec}/{runc}/ids_{pulsec}{str(runc).rjust(4, "0")}.yaml'
 
             scenario_description = ScenarioDescription(pulsec, runc, yaml_file_name)
 
@@ -301,10 +301,10 @@ class ScenarioDescription:
             parent_dir = os.path.dirname(self.yaml_path)
 
             if os.path.basename(parent_dir) == "0":
-                yaml_file_name = parent_dir + f'/ids_{pulsep}{str(runp).rjust(4,"0")}.yaml'
+                yaml_file_name = parent_dir + f'/ids_{pulsep}{str(runp).rjust(4, "0")}.yaml'
             else:
                 grandparent_dir = os.path.dirname(os.path.dirname(parent_dir))
-                yaml_file_name = grandparent_dir + f'/{pulsep}/{runp}/ids_{pulsep}{str(runp).rjust(4,"0")}.yaml'
+                yaml_file_name = grandparent_dir + f'/{pulsep}/{runp}/ids_{pulsep}{str(runp).rjust(4, "0")}.yaml'
 
             scenario_description = ScenarioDescription(pulsep, runp, yaml_file_name)
 
