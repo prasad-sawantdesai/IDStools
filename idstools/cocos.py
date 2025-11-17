@@ -32,7 +32,7 @@ class COCOS:
         Parameters
         ----------
         index : dict, optional
-            COCOS index dictionary with signs of Ip and B0. 
+            COCOS index dictionary with signs of Ip and B0.
             Example: ``{"COCOS": 11, "ipsign": 1, "b0sign": 1}``
         values : dict, optional
             COCOS values dictionary with coordinate convention parameters.

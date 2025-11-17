@@ -198,7 +198,7 @@ def path2py(p, rm_last_bracket=False, header=False, idx=None):
 class idx_dict(dict):
     """
     Class for DD Sub-Indices (e.g. itime, i1, ..., etc.).
-    
+
     Subscripts are stored as instance attributes with None as initial values.
     """
 
