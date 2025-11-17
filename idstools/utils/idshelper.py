@@ -10,6 +10,7 @@ import re
 import sys
 import time
 import types
+from typing import Union
 
 import numpy as np
 import pandas as pd
@@ -767,7 +768,7 @@ def compare_ids(
     return identical, output
 
 
-def get_ids_values(uri: str, idspaths: str | list, dd_update=False, verbose=False):
+def get_ids_values(uri: str, idspaths: Union[str, list], dd_update=False, verbose=False):
     connection = imas.DBEntry(uri, "r")
     if isinstance(idspaths, str):
         idspaths = [idspaths]

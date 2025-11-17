@@ -698,7 +698,7 @@ def eqdsk2ids(
         - Directory path (all files processed)
         - Space-separated string of multiple files/patterns
         - List of file paths
-        - Glob pattern(s) with wildcards (*, ?, [])
+        - Glob pattern(s) with wildcards (``*``, ``?``, ``[]``)
     afile : str, optional
         Path to AEQDSK file (currently not used).
     ipsign : int, default=0
