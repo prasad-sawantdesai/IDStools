@@ -443,7 +443,7 @@ def get_available_ids_and_times(db_entry_object, dd_update=False) -> list:
                     if getattr(ids_object, "time", None):
                         time_array = ids_object.time.value
                 if homogeneous_time == imas.ids_defs.IDS_TIME_MODE_INDEPENDENT:
-                    time_array = [np.NINF]
+                    time_array = [-np.inf]
             except Exception as e:
                 logger.debug(f"{e}")
                 time_array = []

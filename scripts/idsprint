@@ -378,7 +378,7 @@ if __name__ == "__main__":
             if len(time_array) == 1 and np.isnan(time_array[0]):
                 value = f"{question_string}"
                 type = "heterogeneous IDS"
-            elif len(time_array) == 1 and time_array[0] == np.NINF:
+            elif len(time_array) == 1 and time_array[0] == -np.inf:
                 value = f"{question_string}"
                 type = "time independent IDS"
             else:
