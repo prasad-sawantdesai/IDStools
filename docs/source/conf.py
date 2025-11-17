@@ -152,6 +152,7 @@ suppress_warnings = [
     "ref.exc",    # Suppress "py:exc reference target not found" for None exceptions
     "ref.meth",   # Suppress "py:meth reference target not found" for informal method references
     "ref.func",   # Suppress "py:func reference target not found" for informal function references
+    "ref.obj",    # Suppress "py:obj reference target not found" for external library types like cerberus.Validator
     "autoapi.python_import_resolution",  # Suppress import resolution warnings for dynamically generated modules
     "docutils.attribute",  # Suppress attribute directive errors from autoapi-generated docs
     "docutils.emphasis",  # Suppress emphasis parsing errors in docstrings

@@ -525,7 +525,6 @@ def resample_times(
         start (float, optional): The start time for resampling. Defaults to None.
         stop (float, optional): The stop time for resampling. Defaults to None.
         step (float, optional): The time step for resampling. Defaults to None.
-        dd_update (bool, optional): Flag to indicate whether to update the data dictionary. Defaults to False.
         interpolation_method (int, optional): The interpolation method to use for resampling.
             Defaults to `imas.ids_defs.PREVIOUS_INTERP`.
 

@@ -197,20 +197,19 @@ def path2py(p, rm_last_bracket=False, header=False, idx=None):
 
 class idx_dict(dict):
     """
-    Class for DD Sub-Indices (e.g. itime, i1, ..., etc.)
-
-    Attributes
-    ----------
-    data: dict
-        Keep subscripts of IDS field as type dict
+    Class for DD Sub-Indices (e.g. itime, i1, ..., etc.).
+    
+    Subscripts are stored as instance attributes with None as initial values.
     """
 
     def __init__(self, p):
         """
+        Initialize idx_dict from a field path.
+
         Parameters
         ----------
         p : str
-            Field path (path_doc)
+            Field path string containing subscript identifiers in parentheses
         """
 
         # idict = []
