@@ -14,10 +14,9 @@ from test_utils import (
     TEST_FILES,
     TEST_FILES_URLS,
     TESTS_DIR,
-    download_test_file_if_needed,
+    _resolve_test_uri,
     check_result_skip_if_empty_or_error,
     run_idstools_script,
-    _is_valid_netcdf_file,
 )
 
 logger = logging.getLogger(__name__)
@@ -28,9 +27,8 @@ class TestIDSPrintScript:
     @pytest.fixture(params=TEST_FILES)
     def test_file_path(self, request):
         file_path = request.param
-        download_test_file_if_needed(file_path)
-        # Return absolute path
-        return str(TESTS_DIR / file_path)
+        # Resolve URI (downloads if needed) and return absolute path
+        return _resolve_test_uri(file_path)
 
     @pytest.fixture
     def temp_output_dir(self):
@@ -42,10 +40,6 @@ class TestIDSPrintScript:
         return run_idstools_script("idsprint", args, timeout=timeout)
 
     def test_idsprint_list_available_ids(self, test_file_path):
-        # Skip if file cannot be validated
-        if not _is_valid_netcdf_file(test_file_path):
-            pytest.skip(f"Test file {test_file_path} cannot be validated as a valid NetCDF file")
-        
         result = self.run_idsprint(["--uri", test_file_path])
 
         # Check for HDF5 errors and skip if found
@@ -225,8 +219,8 @@ class TestIDSPrintExportFunctionality:
     @pytest.fixture(params=TEST_FILES)
     def test_file_path(self, request):
         file_path = request.param
-        download_test_file_if_needed(file_path)
-        return file_path
+        # Resolve URI (downloads if needed) and return absolute path
+        return _resolve_test_uri(file_path)
 
     @pytest.fixture
     def temp_output_dir(self):

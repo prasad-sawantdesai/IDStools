@@ -6,6 +6,7 @@ import logging
 import subprocess
 import shutil
 import time
+import yaml
 from pathlib import Path
 from functools import wraps, lru_cache
 
@@ -14,19 +15,59 @@ logger = logging.getLogger(__name__)
 # Get the absolute path to the tests directory
 TESTS_DIR = Path(__file__).parent.absolute()
 
-TEST_FILES = [
-    "iter_disruption_113112_1.nc",
-    "iter_scenario_123364_1.nc",
-    "iter_scenario_53298_seq1_DD3.nc",
-    "iter_scenario_53298_seq1_DD4.nc",
-]
 
-TEST_FILES_URLS = {
-    "iter_disruption_113112_1.nc": "https://zenodo.org/records/17062700/files/iter_disruption_113112_1.nc?download=1",
-    "iter_scenario_123364_1.nc": "https://zenodo.org/records/17062700/files/iter_scenario_123364_1.nc?download=1",
-    "iter_scenario_53298_seq1_DD3.nc": "https://zenodo.org/records/17062700/files/iter_scenario_53298_seq1_DD3.nc?download=1",
-    "iter_scenario_53298_seq1_DD4.nc": "https://zenodo.org/records/17062700/files/iter_scenario_53298_seq1_DD4.nc?download=1",
-}
+def _load_test_config():
+    """Load test configuration from YAML file."""
+    config_path = TESTS_DIR / "test_config.yaml"
+    if not config_path.exists():
+        logger.warning(f"Test config not found at {config_path}, using defaults")
+        return None
+    
+    with open(config_path, 'r') as f:
+        return yaml.safe_load(f)
+
+
+def _get_test_profile():
+    """Get the active test profile from environment or config default."""
+    profile = os.environ.get("TEST_PROFILE", None)
+    config = _load_test_config()
+    
+    if profile is None and config:
+        profile = config.get("default_profile", "local")
+    elif profile is None:
+        profile = "local"
+    
+    return profile
+
+
+def _get_test_uris_from_config():
+    """Get test URIs for the active test profile."""
+    config = _load_test_config()
+    if not config:
+        return []
+    
+    profile = _get_test_profile()
+    profile_config = config.get("profiles", {}).get(profile)
+    
+    if not profile_config:
+        logger.warning(f"Profile '{profile}' not found in config, using local profile")
+        profile_config = config.get("profiles", {}).get("local", {})
+    
+    return profile_config.get("uris", [])
+
+
+# Load configuration and build TEST_URIS
+_TEST_CONFIG = _load_test_config()
+_TEST_PROFILE = _get_test_profile()
+TEST_URIS = _get_test_uris_from_config()
+
+# Build TEST_FILES NetCDF files
+TEST_FILES = [uri for uri in TEST_URIS if not uri.startswith("imas:")]
+
+# Build TEST_FILES_URLS from config
+TEST_FILES_URLS = {}
+if _TEST_CONFIG and "netcdf_files" in _TEST_CONFIG:
+    TEST_FILES_URLS = _TEST_CONFIG["netcdf_files"]
 
 
 @lru_cache(maxsize=128)
@@ -75,10 +116,6 @@ def require_files(*file_uris):
         @pytest.mark.parametrize("test_file_path", file_list)
         @wraps(func)
         def wrapper(self, test_file_path, *args, **kwargs):
-            download_test_file_if_needed(test_file_path)
-            # Validate file can be opened before running test
-            if not _is_valid_netcdf_file(test_file_path):
-                pytest.skip(f"Test file {test_file_path} cannot be validated as a valid NetCDF file")
             return func(self, test_file_path, *args, **kwargs)
 
         return wrapper
@@ -86,123 +123,16 @@ def require_files(*file_uris):
     return decorator
 
 
-def _is_valid_netcdf_file(file_path):
-    """Check if file is a valid NetCDF file by attempting to read its header."""
-    try:
-        import h5py
-        with h5py.File(file_path, 'r') as f:
-            # Try to read the root attributes to ensure file is readable
-            _ = list(f.attrs.items())
-            return True
-    except Exception as e:
-        logger.debug(f"h5py validation failed for {file_path}: {e}")
-        try:
-            # Fallback: check if file exists and has reasonable size
-            if os.path.exists(file_path) and os.path.getsize(file_path) > 1000000:  # At least 1MB
-                return True
-        except Exception:
-            pass
-        return False
-
-
-def download_test_file_if_needed(test_file_path):
-    if test_file_path in TEST_FILES_URLS:
-        # Use absolute path in tests directory
-        abs_file_path = TESTS_DIR / test_file_path
-        
-        # Check if file exists and is valid
-        if abs_file_path.exists():
-            if _is_valid_netcdf_file(str(abs_file_path)):
-                logger.info(f"Test file {test_file_path} found and valid at {abs_file_path}")
-                return
-            else:
-                logger.warning(f"Test file {test_file_path} exists but appears corrupted. Removing and re-downloading...")
-                try:
-                    abs_file_path.unlink()
-                except Exception as e:
-                    logger.warning(f"Could not remove corrupted file: {e}")
-        
-        # Download the file with retry logic
-        url = TEST_FILES_URLS[test_file_path]
-        max_retries = 3
-        retry_delay = 2  # seconds
-        
-        for attempt in range(1, max_retries + 1):
-            logger.info(f"Test file {test_file_path} not found. Downloading from Zenodo (attempt {attempt}/{max_retries})...")
-            try:
-                # Use urllib with timeout via urlopen instead of urlretrieve
-                # (urlretrieve doesn't support timeout in all Python versions)
-                with urllib.request.urlopen(url, timeout=300) as response:
-                    with open(abs_file_path, 'wb') as out_file:
-                        out_file.write(response.read())
-                
-                # Verify downloaded file is valid
-                if _is_valid_netcdf_file(str(abs_file_path)):
-                    # Log file details for debugging
-                    file_size = abs_file_path.stat().st_size
-                    logger.info(f"Successfully downloaded and validated {test_file_path} (size: {file_size / (1024**2):.2f} MB) to {abs_file_path}")
-                    
-                    # List all files in tests directory for debugging
-                    nc_files = list(TESTS_DIR.glob('*.nc'))
-                    if nc_files:
-                        logger.debug(f"NetCDF files in tests directory: {[f.name for f in nc_files]}")
-                    
-                    return
-                else:
-                    logger.warning(f"Downloaded file {test_file_path} appears to be corrupted.")
-                    try:
-                        abs_file_path.unlink()
-                    except Exception:
-                        pass
-                    
-                    # On last attempt, fail the test
-                    if attempt == max_retries:
-                        raise RuntimeError(f"Downloaded test file appears corrupted after {max_retries} attempts: {test_file_path}")
-                    
-            except urllib.error.URLError as e:
-                logger.warning(f"Download attempt {attempt} failed with network error: {e}")
-                try:
-                    if abs_file_path.exists():
-                        abs_file_path.unlink()
-                except Exception:
-                    pass
-                
-                if attempt == max_retries:
-                    raise RuntimeError(f"Could not download mandatory test file after {max_retries} attempts: {test_file_path}. Error: {e}")
-                
-                # Wait before retry
-                time.sleep(retry_delay)
-                
-            except RuntimeError:
-                # Re-raise RuntimeError (our custom errors)
-                raise
-            except Exception as e:
-                logger.warning(f"Download attempt {attempt} failed: {e}")
-                try:
-                    if abs_file_path.exists():
-                        abs_file_path.unlink()
-                except Exception:
-                    pass
-                
-                if attempt == max_retries:
-                    raise RuntimeError(f"Could not download mandatory test file after {max_retries} attempts: {test_file_path}. Error: {e}")
-                
-                # Wait before retry
-                time.sleep(retry_delay)
-
-
-def create_test_file_fixture(test_files=None, test_files_urls=None):
-    if test_files is None:
-        test_files = TEST_FILES
-    if test_files_urls is None:
-        test_files_urls = TEST_FILES_URLS
-
-    @pytest.fixture(params=test_files)
+def create_test_file_fixture(test_uris=None):
+    """Create a pytest fixture that provides test URIs (NetCDF or IMAS)."""
+    if test_uris is None:
+        test_uris = TEST_URIS
+    
+    @pytest.fixture(params=test_uris)
     def test_file_path_fixture(request):
-        file_path = request.param
-        download_test_file_if_needed(file_path)
-        # Return absolute path
-        return str(TESTS_DIR / file_path)
+        uri = request.param
+        # Resolve URI to absolute path (for NetCDF) or return IMAS URI as-is
+        return _resolve_test_uri(uri)
 
     return test_file_path_fixture
 
@@ -300,3 +230,78 @@ def run_idstools_script(script_name, args, timeout=30):
     logger.debug(f"{'='*60}\n")
 
     return result
+
+
+def _resolve_test_uri(uri):
+    """
+    Resolve a test URI to an absolute path or return as-is for IMAS URIs.
+    For NetCDF files, download them if not present in the tests directory.
+    """
+    if uri.startswith("imas:"):
+        # IMAS URI - return as-is
+        return uri
+    else:
+        # NetCDF file path - resolve to absolute path in tests directory
+        abs_path = TESTS_DIR / uri
+        
+        # Check if file exists
+        if abs_path.exists():
+            file_size = abs_path.stat().st_size
+            logger.info(f"Test file found: {abs_path} (size: {file_size / (1024**2):.2f} MB)")
+            return str(abs_path)
+        
+        # File not found, try to download it
+        if uri in TEST_FILES_URLS:
+            logger.info(f"Test file not found locally: {abs_path}")
+            _download_test_file(uri, abs_path, TEST_FILES_URLS[uri])
+            return str(abs_path)
+        else:
+            logger.error(f"Test file {uri} not found and no download URL available")
+            raise FileNotFoundError(f"Test file not found: {abs_path}")
+
+
+def _download_test_file(filename, abs_path, url, max_retries=3, retry_delay=2):
+    """Download a test file from Zenodo with retry logic."""
+    for attempt in range(1, max_retries + 1):
+        logger.info(f"Downloading {filename} from Zenodo (attempt {attempt}/{max_retries})...")
+        try:
+            # Use urllib with timeout
+            with urllib.request.urlopen(url, timeout=300) as response:
+                with open(abs_path, 'wb') as out_file:
+                    out_file.write(response.read())
+            
+            # Verify file was downloaded
+            if abs_path.exists():
+                file_size = abs_path.stat().st_size
+                logger.info(f"Successfully downloaded {filename} (size: {file_size / (1024**2):.2f} MB) to {abs_path}")
+                return
+            else:
+                raise RuntimeError(f"Download completed but file not found: {abs_path}")
+                
+        except urllib.error.URLError as e:
+            logger.warning(f"Download attempt {attempt} failed with network error: {e}")
+            try:
+                if abs_path.exists():
+                    abs_path.unlink()
+            except Exception:
+                pass
+            
+            if attempt == max_retries:
+                raise RuntimeError(f"Could not download test file after {max_retries} attempts: {filename}. Error: {e}")
+            
+            # Wait before retry
+            time.sleep(retry_delay)
+            
+        except Exception as e:
+            logger.warning(f"Download attempt {attempt} failed: {e}")
+            try:
+                if abs_path.exists():
+                    abs_path.unlink()
+            except Exception:
+                pass
+            
+            if attempt == max_retries:
+                raise RuntimeError(f"Could not download test file after {max_retries} attempts: {filename}. Error: {e}")
+            
+            # Wait before retry
+            time.sleep(retry_delay)

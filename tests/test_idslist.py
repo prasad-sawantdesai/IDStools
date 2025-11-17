@@ -9,10 +9,9 @@ from test_utils import (
     require_ids,
     TEST_FILES,
     TESTS_DIR,
-    download_test_file_if_needed,
+    _resolve_test_uri,
     check_result_skip_if_empty_or_error,
     run_idstools_script,
-    _is_valid_netcdf_file,
 )
 
 logger = logging.getLogger(__name__)
@@ -23,18 +22,13 @@ class TestIDSListScript:
     @pytest.fixture(params=TEST_FILES)
     def test_file_path(self, request):
         file_path = request.param
-        download_test_file_if_needed(file_path)
-        # Return absolute path
-        return str(TESTS_DIR / file_path)
+        # Resolve URI (downloads if needed) and return absolute path
+        return _resolve_test_uri(file_path)
 
     def run_idslist(self, args, timeout=120):
         return run_idstools_script("idslist", args, timeout=timeout)
 
     def test_idslist_default_mode(self, test_file_path):
-        # Skip if file cannot be validated
-        if not _is_valid_netcdf_file(test_file_path):
-            pytest.skip(f"Test file {test_file_path} cannot be validated as a valid NetCDF file")
-        
         result = self.run_idslist(["--uri", test_file_path])
 
         # Check for HDF5 errors and skip if found
