@@ -1,9 +1,11 @@
 import pytest
 import os
 import urllib.request
+import urllib.error
 import logging
 import subprocess
 import shutil
+import time
 from pathlib import Path
 from functools import wraps, lru_cache
 
@@ -115,24 +117,67 @@ def download_test_file_if_needed(test_file_path):
                 except Exception as e:
                     logger.warning(f"Could not remove corrupted file: {e}")
         
-        # Download the file
-        logger.info(f"Test file {test_file_path} not found. Downloading from Zenodo...")
-        try:
-            urllib.request.urlretrieve(TEST_FILES_URLS[test_file_path], test_file_path)
-            
-            # Verify downloaded file is valid
-            if not _is_valid_netcdf_file(test_file_path):
-                logger.warning(f"Downloaded file {test_file_path} appears to be corrupted.")
+        # Download the file with retry logic
+        url = TEST_FILES_URLS[test_file_path]
+        max_retries = 3
+        retry_delay = 2  # seconds
+        
+        for attempt in range(1, max_retries + 1):
+            logger.info(f"Test file {test_file_path} not found. Downloading from Zenodo (attempt {attempt}/{max_retries})...")
+            try:
+                # Set a reasonable timeout (5 minutes for large files)
+                urllib.request.urlretrieve(url, test_file_path, timeout=300)
+                
+                # Verify downloaded file is valid
+                if _is_valid_netcdf_file(test_file_path):
+                    # Log file details for debugging
+                    file_size = os.path.getsize(test_file_path)
+                    logger.info(f"Successfully downloaded and validated {test_file_path} (size: {file_size / (1024**2):.2f} MB)")
+                    
+                    # List all files in current directory for debugging
+                    current_files = [f for f in os.listdir('.') if f.endswith('.nc')]
+                    if current_files:
+                        logger.debug(f"NetCDF files in current directory: {current_files}")
+                    
+                    return
+                else:
+                    logger.warning(f"Downloaded file {test_file_path} appears to be corrupted.")
+                    try:
+                        os.remove(test_file_path)
+                    except Exception:
+                        pass
+                    
+                    # On last attempt, skip the test
+                    if attempt == max_retries:
+                        pytest.skip(f"Downloaded test file appears corrupted after {max_retries} attempts: {test_file_path}")
+                    
+            except urllib.error.URLError as e:
+                logger.warning(f"Download attempt {attempt} failed with network error: {e}")
                 try:
-                    os.remove(test_file_path)
+                    if os.path.exists(test_file_path):
+                        os.remove(test_file_path)
                 except Exception:
                     pass
-                pytest.skip(f"Downloaded test file appears corrupted: {test_file_path}")
-            
-            logger.info(f"Successfully downloaded and validated {test_file_path}")
-        except Exception as e:
-            logger.warning(f"Could not download {test_file_path}: {e}")
-            pytest.skip(f"Could not download test file: {test_file_path}")
+                
+                if attempt == max_retries:
+                    pytest.skip(f"Could not download test file after {max_retries} attempts: {test_file_path} ({e})")
+                
+                # Wait before retry
+                time.sleep(retry_delay)
+                
+            except Exception as e:
+                logger.warning(f"Download attempt {attempt} failed: {e}")
+                try:
+                    if os.path.exists(test_file_path):
+                        os.remove(test_file_path)
+                except Exception:
+                    pass
+                
+                if attempt == max_retries:
+                    pytest.skip(f"Could not download test file after {max_retries} attempts: {test_file_path} ({e})")
+                
+                # Wait before retry
+                time.sleep(retry_delay)
 
 
 def create_test_file_fixture(test_files=None, test_files_urls=None):

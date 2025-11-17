@@ -384,7 +384,7 @@ if __name__ == "__main__":
             else:
                 value = f"{len(time_array)}"
                 type = time_array
-            
+
             # Handle both string and list types safely
             if isinstance(type, str):
                 type_str = type
@@ -392,7 +392,7 @@ if __name__ == "__main__":
                 type_str = str(type[0]) + ",...," + str(type[-1])
             else:
                 type_str = "empty"
-            
+
             table.add_row(ids_name, value, type_str)
         console.print(table)
         connection.close()
