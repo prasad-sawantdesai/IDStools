@@ -4,10 +4,20 @@ import sys
 
 import matplotlib
 
+# Configure matplotlib backend based on display availability and tkinter support
 if "DISPLAY" not in os.environ:
+    # No display available, use non-interactive backend
     matplotlib.use("agg")
 else:
-    matplotlib.use("TKagg")
+    # Display available, try to use TKagg (interactive), fallback to agg if tkinter not available
+    try:
+        import tkinter
+
+        matplotlib.use("TKagg")
+    except ImportError:
+        # Tkinter not available, use agg backend (still allows saving images)
+        matplotlib.use("agg")
+
 import matplotlib.pyplot as plt
 
 logger = logging.getLogger("module")

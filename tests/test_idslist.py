@@ -25,8 +25,8 @@ class TestIDSListScript:
         download_test_file_if_needed(file_path)
         return file_path
 
-    def run_idslist(self, args):
-        return run_idstools_script("idslist", args)
+    def run_idslist(self, args, timeout=120):
+        return run_idstools_script("idslist", args, timeout=timeout)
 
     def test_idslist_default_mode(self, test_file_path):
         # Skip if file cannot be validated

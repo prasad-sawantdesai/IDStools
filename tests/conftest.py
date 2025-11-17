@@ -35,11 +35,11 @@ def _print_library_versions():
 ╔══════════════════════════════════════════════════════════════════════╗
 ║                    Test Environment Versions                         ║
 ╠══════════════════════════════════════════════════════════════════════╣
-║  NumPy:              {numpy_version:<56} ║
-║  h5py:               {h5py_version:<56} ║
-║  HDF5:               {h5_version:<56} ║
-║  NetCDF4:            {netcdf_version:<56} ║
-║  IMAS:               {imas_version:<56} ║
+║  NumPy:              {numpy_version:<47} ║
+║  h5py:               {h5py_version:<47} ║
+║  HDF5:               {h5_version:<47} ║
+║  NetCDF4:            {netcdf_version:<47} ║
+║  IMAS:               {imas_version:<47} ║
 ╚══════════════════════════════════════════════════════════════════════╝
 """
     print(version_info)

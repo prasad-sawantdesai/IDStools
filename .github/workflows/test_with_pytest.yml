@@ -30,6 +30,16 @@ jobs:
           pip install pytest pytest-cov pytest-xdist
           pip install .[test]
 
+      - name: Download test files from Zenodo
+        run: |
+          mkdir -p tests
+          cd tests
+          wget -q "https://zenodo.org/records/17062700/files/iter_disruption_113112_1.nc?download=1" -O iter_disruption_113112_1.nc
+          wget -q "https://zenodo.org/records/17062700/files/iter_scenario_123364_1.nc?download=1" -O iter_scenario_123364_1.nc
+          wget -q "https://zenodo.org/records/17062700/files/iter_scenario_53298_seq1_DD3.nc?download=1" -O iter_scenario_53298_seq1_DD3.nc
+          wget -q "https://zenodo.org/records/17062700/files/iter_scenario_53298_seq1_DD4.nc?download=1" -O iter_scenario_53298_seq1_DD4.nc
+          ls -lh *.nc
+
       - name: Run tests
         run: |
           python -m pytest -n=auto --cov=idstools --cov-report=term-missing --cov-report=xml:coverage.xml --cov-report=html:htmlcov --junit-xml=junit.xml

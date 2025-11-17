@@ -282,7 +282,9 @@ def run_idstools_script(script_name, args, timeout=30):
     logger.debug(f"Running command: {' '.join(cmd)}")
     logger.debug(f"{'='*60}")
 
-    result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+    # Increase timeout to 120 seconds for data dictionary parsing
+    # (especially when dealing with multiple DD versions like DD3 and DD4)
+    result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
 
     logger.debug(f"\nReturn code: {result.returncode}")
     if result.stdout:
