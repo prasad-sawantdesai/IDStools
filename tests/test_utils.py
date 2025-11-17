@@ -79,12 +79,51 @@ def require_files(*file_uris):
     return decorator
 
 
+def _is_valid_netcdf_file(file_path):
+    """Check if file is a valid NetCDF file by attempting to read its header."""
+    try:
+        import h5py
+        with h5py.File(file_path, 'r') as f:
+            return True
+    except Exception:
+        try:
+            # Fallback: check if file exists and has reasonable size
+            if os.path.exists(file_path) and os.path.getsize(file_path) > 1000000:  # At least 1MB
+                return True
+        except Exception:
+            pass
+        return False
+
+
 def download_test_file_if_needed(test_file_path):
-    if test_file_path in TEST_FILES_URLS and not os.path.exists(test_file_path):
+    if test_file_path in TEST_FILES_URLS:
+        # Check if file exists and is valid
+        if os.path.exists(test_file_path):
+            if _is_valid_netcdf_file(test_file_path):
+                logger.info(f"Test file {test_file_path} found and valid.")
+                return
+            else:
+                logger.warning(f"Test file {test_file_path} exists but appears corrupted. Removing and re-downloading...")
+                try:
+                    os.remove(test_file_path)
+                except Exception as e:
+                    logger.warning(f"Could not remove corrupted file: {e}")
+        
+        # Download the file
         logger.info(f"Test file {test_file_path} not found. Downloading from Zenodo...")
         try:
             urllib.request.urlretrieve(TEST_FILES_URLS[test_file_path], test_file_path)
-            logger.info(f"Successfully downloaded {test_file_path}")
+            
+            # Verify downloaded file is valid
+            if not _is_valid_netcdf_file(test_file_path):
+                logger.warning(f"Downloaded file {test_file_path} appears to be corrupted.")
+                try:
+                    os.remove(test_file_path)
+                except Exception:
+                    pass
+                pytest.skip(f"Downloaded test file appears corrupted: {test_file_path}")
+            
+            logger.info(f"Successfully downloaded and validated {test_file_path}")
         except Exception as e:
             logger.warning(f"Could not download {test_file_path}: {e}")
             pytest.skip(f"Could not download test file: {test_file_path}")
@@ -99,15 +138,7 @@ def create_test_file_fixture(test_files=None, test_files_urls=None):
     @pytest.fixture(params=test_files)
     def test_file_path_fixture(request):
         file_path = request.param
-
-        if file_path in test_files_urls and not os.path.exists(file_path):
-            logger.info(f"Test file {file_path} not found. Downloading from Zenodo...")
-            try:
-                urllib.request.urlretrieve(test_files_urls[file_path], file_path)
-                logger.info(f"Successfully downloaded {file_path}")
-            except Exception as e:
-                pytest.skip(f"Could not download test file {file_path}: {e}")
-
+        download_test_file_if_needed(file_path)
         return file_path
 
     return test_file_path_fixture

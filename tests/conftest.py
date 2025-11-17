@@ -3,6 +3,48 @@
 import pytest
 
 
+def _print_library_versions():
+    """Print versions of key libraries used in tests."""
+    try:
+        import numpy
+        numpy_version = numpy.__version__
+    except ImportError:
+        numpy_version = "Not installed"
+    
+    try:
+        import h5py
+        h5py_version = h5py.__version__
+        h5_version = h5py.version.hdf5_version
+    except ImportError:
+        h5py_version = "Not installed"
+        h5_version = "Not installed"
+    
+    try:
+        import netCDF4
+        netcdf_version = netCDF4.__version__
+    except ImportError:
+        netcdf_version = "Not installed"
+    
+    try:
+        import imas
+        imas_version = imas.__version__
+    except (ImportError, AttributeError):
+        imas_version = "Not installed"
+    
+    version_info = f"""
+╔══════════════════════════════════════════════════════════════════════╗
+║                    Test Environment Versions                         ║
+╠══════════════════════════════════════════════════════════════════════╣
+║  NumPy:              {numpy_version:<56} ║
+║  h5py:               {h5py_version:<56} ║
+║  HDF5:               {h5_version:<56} ║
+║  NetCDF4:            {netcdf_version:<56} ║
+║  IMAS:               {imas_version:<56} ║
+╚══════════════════════════════════════════════════════════════════════╝
+"""
+    print(version_info)
+
+
 def pytest_addoption(parser):
     """Add command line option to specify test file or URI."""
     parser.addoption(
@@ -15,6 +57,9 @@ def pytest_addoption(parser):
 
 def pytest_configure(config):
     """Configure pytest with custom markers and handle --test-file option."""
+    # Print library versions at test start
+    _print_library_versions()
+    
     # Store test file option globally if provided
     test_file = config.getoption("--test-file")
     if test_file:
