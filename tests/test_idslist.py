@@ -8,6 +8,7 @@ from pathlib import Path
 from test_utils import (
     require_ids,
     TEST_FILES,
+    TESTS_DIR,
     download_test_file_if_needed,
     check_result_skip_if_empty_or_error,
     run_idstools_script,
@@ -23,7 +24,8 @@ class TestIDSListScript:
     def test_file_path(self, request):
         file_path = request.param
         download_test_file_if_needed(file_path)
-        return file_path
+        # Return absolute path
+        return str(TESTS_DIR / file_path)
 
     def run_idslist(self, args, timeout=120):
         return run_idstools_script("idslist", args, timeout=timeout)

@@ -13,6 +13,7 @@ from test_utils import (
     require_files,
     TEST_FILES,
     TEST_FILES_URLS,
+    TESTS_DIR,
     download_test_file_if_needed,
     check_result_skip_if_empty_or_error,
     run_idstools_script,
@@ -28,7 +29,8 @@ class TestIDSPrintScript:
     def test_file_path(self, request):
         file_path = request.param
         download_test_file_if_needed(file_path)
-        return file_path
+        # Return absolute path
+        return str(TESTS_DIR / file_path)
 
     @pytest.fixture
     def temp_output_dir(self):

@@ -27,16 +27,7 @@ jobs:
       - name: Install dependencies
         run: |
           pip install --upgrade pip setuptools wheel
-          pip install pytest pytest-cov pytest-xdist
           pip install .[test]
-
-      - name: Download test files from Zenodo
-        run: |
-          wget -q "https://zenodo.org/records/17062700/files/iter_disruption_113112_1.nc?download=1" -O iter_disruption_113112_1.nc
-          wget -q "https://zenodo.org/records/17062700/files/iter_scenario_123364_1.nc?download=1" -O iter_scenario_123364_1.nc
-          wget -q "https://zenodo.org/records/17062700/files/iter_scenario_53298_seq1_DD3.nc?download=1" -O iter_scenario_53298_seq1_DD3.nc
-          wget -q "https://zenodo.org/records/17062700/files/iter_scenario_53298_seq1_DD4.nc?download=1" -O iter_scenario_53298_seq1_DD4.nc
-          ls -lh *.nc
 
       - name: Run tests
         run: |

@@ -11,6 +11,8 @@ from functools import wraps, lru_cache
 
 logger = logging.getLogger(__name__)
 
+# Get the absolute path to the tests directory
+TESTS_DIR = Path(__file__).parent.absolute()
 
 TEST_FILES = [
     "iter_disruption_113112_1.nc",
@@ -105,15 +107,18 @@ def _is_valid_netcdf_file(file_path):
 
 def download_test_file_if_needed(test_file_path):
     if test_file_path in TEST_FILES_URLS:
+        # Use absolute path in tests directory
+        abs_file_path = TESTS_DIR / test_file_path
+        
         # Check if file exists and is valid
-        if os.path.exists(test_file_path):
-            if _is_valid_netcdf_file(test_file_path):
-                logger.info(f"Test file {test_file_path} found and valid.")
+        if abs_file_path.exists():
+            if _is_valid_netcdf_file(str(abs_file_path)):
+                logger.info(f"Test file {test_file_path} found and valid at {abs_file_path}")
                 return
             else:
                 logger.warning(f"Test file {test_file_path} exists but appears corrupted. Removing and re-downloading...")
                 try:
-                    os.remove(test_file_path)
+                    abs_file_path.unlink()
                 except Exception as e:
                     logger.warning(f"Could not remove corrupted file: {e}")
         
@@ -128,25 +133,25 @@ def download_test_file_if_needed(test_file_path):
                 # Use urllib with timeout via urlopen instead of urlretrieve
                 # (urlretrieve doesn't support timeout in all Python versions)
                 with urllib.request.urlopen(url, timeout=300) as response:
-                    with open(test_file_path, 'wb') as out_file:
+                    with open(abs_file_path, 'wb') as out_file:
                         out_file.write(response.read())
                 
                 # Verify downloaded file is valid
-                if _is_valid_netcdf_file(test_file_path):
+                if _is_valid_netcdf_file(str(abs_file_path)):
                     # Log file details for debugging
-                    file_size = os.path.getsize(test_file_path)
-                    logger.info(f"Successfully downloaded and validated {test_file_path} (size: {file_size / (1024**2):.2f} MB)")
+                    file_size = abs_file_path.stat().st_size
+                    logger.info(f"Successfully downloaded and validated {test_file_path} (size: {file_size / (1024**2):.2f} MB) to {abs_file_path}")
                     
-                    # List all files in current directory for debugging
-                    current_files = [f for f in os.listdir('.') if f.endswith('.nc')]
-                    if current_files:
-                        logger.debug(f"NetCDF files in current directory: {current_files}")
+                    # List all files in tests directory for debugging
+                    nc_files = list(TESTS_DIR.glob('*.nc'))
+                    if nc_files:
+                        logger.debug(f"NetCDF files in tests directory: {[f.name for f in nc_files]}")
                     
                     return
                 else:
                     logger.warning(f"Downloaded file {test_file_path} appears to be corrupted.")
                     try:
-                        os.remove(test_file_path)
+                        abs_file_path.unlink()
                     except Exception:
                         pass
                     
@@ -157,8 +162,8 @@ def download_test_file_if_needed(test_file_path):
             except urllib.error.URLError as e:
                 logger.warning(f"Download attempt {attempt} failed with network error: {e}")
                 try:
-                    if os.path.exists(test_file_path):
-                        os.remove(test_file_path)
+                    if abs_file_path.exists():
+                        abs_file_path.unlink()
                 except Exception:
                     pass
                 
@@ -174,8 +179,8 @@ def download_test_file_if_needed(test_file_path):
             except Exception as e:
                 logger.warning(f"Download attempt {attempt} failed: {e}")
                 try:
-                    if os.path.exists(test_file_path):
-                        os.remove(test_file_path)
+                    if abs_file_path.exists():
+                        abs_file_path.unlink()
                 except Exception:
                     pass
                 
@@ -196,7 +201,8 @@ def create_test_file_fixture(test_files=None, test_files_urls=None):
     def test_file_path_fixture(request):
         file_path = request.param
         download_test_file_if_needed(file_path)
-        return file_path
+        # Return absolute path
+        return str(TESTS_DIR / file_path)
 
     return test_file_path_fixture
 
