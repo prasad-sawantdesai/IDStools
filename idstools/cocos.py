@@ -44,9 +44,9 @@ class COCOS:
 
         Parameters
         ----------
-        index: dict=None
+        index : dict, optional
             COCOS index with signs of Ip and B0, e.g. index={"COCOS": 11}
-        values: dict=None
+        values : dict, optional
             COCOS values
         """
 

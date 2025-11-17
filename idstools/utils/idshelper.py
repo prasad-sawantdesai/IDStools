@@ -350,10 +350,12 @@ def get_available_ids_and_occurrences(
     This function returns a list of pairs of available IDS types and their occurrences in a given DBEntry object.
 
     Args:
-        db_entry_object: An object of the class , which represents an open DBEntry in
+        db_entry_object: An object of the class DBEntry, which represents an open DBEntry in
             which available IDSs will be looked for.
-        time_mode: The time mode of interest for the IDSs in the given DBEntry. It can be one of the following
+        time_mode: The time mode of interest for the IDSs in the given DBEntry.
         get_comment: Output ids_properties.comment field for each found occurrence
+        dd_update (bool, optional): Flag to indicate whether to update the data dictionary. Defaults to False.
+        get_version: Whether to return version information
 
     Returns:
         a list of pairs (idstype:str,occurrence:int) with data in the given DBEntry.

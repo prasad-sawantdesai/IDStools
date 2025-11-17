@@ -120,6 +120,11 @@ autoapi_member_order = 'groupwise'
 autoapi_ignore = ['*/_version.py', '*/test/*']  # _version.py is generated at build time, test modules not documented
 autoapi_python_use_implicit_namespaces = True
 autoapi_python_class_content = 'both'
+autoapi_options = [
+    "members",
+    "undoc-members",
+    "show-inheritance",
+]
 
 # Configure sphinxcontrib-images
 images_config = {
@@ -147,6 +152,9 @@ suppress_warnings = [
     "ref.exc",    # Suppress "py:exc reference target not found" for None exceptions
     "ref.meth",   # Suppress "py:meth reference target not found" for informal method references
     "ref.func",   # Suppress "py:func reference target not found" for informal function references
+    "autoapi.python_import_resolution",  # Suppress import resolution warnings for dynamically generated modules
+    "docutils.attribute",  # Suppress attribute directive errors from autoapi-generated docs
+    "docutils.emphasis",  # Suppress emphasis parsing errors in docstrings
 ]
 
 

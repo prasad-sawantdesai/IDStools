@@ -399,7 +399,7 @@ def map__GEQDSK_to_ids(geqdsk, eq):
     ----------
     geqdsk: GEQDSK
         Class GEQDSK
-    eq: imas_*_ual_*.equilibrium.equilibrium ('*' corresponds to IMAS/UAL ver.)
+    eq: imas_*_ual_* .equilibrium.equilibrium (``*`` corresponds to IMAS/UAL version)
         IDS/equilibrium
 
     Returns

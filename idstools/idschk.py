@@ -209,8 +209,8 @@ class idx_dict(dict):
         """
         Parameters
         ----------
-        path_doc: str
-            Field path
+        p : str
+            Field path (path_doc)
         """
 
         # idict = []
