@@ -42,7 +42,7 @@ default_profile: "local"
 # Zenodo download information for NetCDF files
 zenodo_record_id: "17062700"
 netcdf_files:
-  iter_disruption_113112_1.nc: "https://zenodo.org/records/17062700/files/iter_disruption_113112_1.nc?download=1"
-  iter_scenario_123364_1.nc: "https://zenodo.org/records/17062700/files/iter_scenario_123364_1.nc?download=1"
-  iter_scenario_53298_seq1_DD3.nc: "https://zenodo.org/records/17062700/files/iter_scenario_53298_seq1_DD3.nc?download=1"
-  iter_scenario_53298_seq1_DD4.nc: "https://zenodo.org/records/17062700/files/iter_scenario_53298_seq1_DD4.nc?download=1"
+  iter_disruption_113112_1.nc: "https://zenodo.org/records/17062700/files/iter_disruption_113112_1.nc"
+  iter_scenario_123364_1.nc: "https://zenodo.org/records/17062700/files/iter_scenario_123364_1.nc"
+  iter_scenario_53298_seq1_DD3.nc: "https://zenodo.org/records/17062700/files/iter_scenario_53298_seq1_DD3.nc"
+  iter_scenario_53298_seq1_DD4.nc: "https://zenodo.org/records/17062700/files/iter_scenario_53298_seq1_DD4.nc"
