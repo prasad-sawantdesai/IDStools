@@ -125,8 +125,11 @@ def download_test_file_if_needed(test_file_path):
         for attempt in range(1, max_retries + 1):
             logger.info(f"Test file {test_file_path} not found. Downloading from Zenodo (attempt {attempt}/{max_retries})...")
             try:
-                # Set a reasonable timeout (5 minutes for large files)
-                urllib.request.urlretrieve(url, test_file_path, timeout=300)
+                # Use urllib with timeout via urlopen instead of urlretrieve
+                # (urlretrieve doesn't support timeout in all Python versions)
+                with urllib.request.urlopen(url, timeout=300) as response:
+                    with open(test_file_path, 'wb') as out_file:
+                        out_file.write(response.read())
                 
                 # Verify downloaded file is valid
                 if _is_valid_netcdf_file(test_file_path):
@@ -147,9 +150,9 @@ def download_test_file_if_needed(test_file_path):
                     except Exception:
                         pass
                     
-                    # On last attempt, skip the test
+                    # On last attempt, fail the test
                     if attempt == max_retries:
-                        pytest.skip(f"Downloaded test file appears corrupted after {max_retries} attempts: {test_file_path}")
+                        raise RuntimeError(f"Downloaded test file appears corrupted after {max_retries} attempts: {test_file_path}")
                     
             except urllib.error.URLError as e:
                 logger.warning(f"Download attempt {attempt} failed with network error: {e}")
@@ -160,11 +163,14 @@ def download_test_file_if_needed(test_file_path):
                     pass
                 
                 if attempt == max_retries:
-                    pytest.skip(f"Could not download test file after {max_retries} attempts: {test_file_path} ({e})")
+                    raise RuntimeError(f"Could not download mandatory test file after {max_retries} attempts: {test_file_path}. Error: {e}")
                 
                 # Wait before retry
                 time.sleep(retry_delay)
                 
+            except RuntimeError:
+                # Re-raise RuntimeError (our custom errors)
+                raise
             except Exception as e:
                 logger.warning(f"Download attempt {attempt} failed: {e}")
                 try:
@@ -174,7 +180,7 @@ def download_test_file_if_needed(test_file_path):
                     pass
                 
                 if attempt == max_retries:
-                    pytest.skip(f"Could not download test file after {max_retries} attempts: {test_file_path} ({e})")
+                    raise RuntimeError(f"Could not download mandatory test file after {max_retries} attempts: {test_file_path}. Error: {e}")
                 
                 # Wait before retry
                 time.sleep(retry_delay)
