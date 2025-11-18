@@ -41,6 +41,8 @@ jobs:
           ls -lh *.nc
 
       - name: Run tests
+        env:
+          HDF5_USE_FILE_LOCKING: "FALSE"
         run: |
           python -m pytest -n=auto --cov=idstools --cov-report=term-missing --cov-report=xml:coverage.xml --cov-report=html:htmlcov --junit-xml=junit.xml
 
