@@ -100,7 +100,8 @@ def require_ids(*ids_names, require_all=False):
                         pytest.skip(f"None of the required IDS present in {test_file_path}: {', '.join(ids_names)}")
 
             except Exception as e:
-                pytest.skip(f"Could not check for IDS: {e}")
+                logger.error(f"Error checking IDS: {e}", exc_info=True)
+                raise AssertionError(f"Could not check for IDS: {e}") from e
 
             return func(self, test_file_path, *args, **kwargs)
 
@@ -174,11 +175,13 @@ def skip_on_error_or_empty(error_patterns=None):
                 error_msg = str(e)
                 raise
             except Exception as e:
-                error_msg = str(e)
-                for pattern in error_patterns:
-                    if pattern.lower() in error_msg.lower():
-                        pytest.skip(f"Skipping due to data issue: {pattern}")
-                raise
+                logger.error(f"Error checking IDS: {e}", exc_info=True)
+                raise AssertionError(f"Could not check for IDS: {e}") from e
+                # error_msg = str(e)
+                # for pattern in error_patterns:
+                #     if pattern.lower() in error_msg.lower():
+                #         pytest.skip(f"Skipping due to data issue: {pattern}")
+                # raise
 
         return wrapper
 

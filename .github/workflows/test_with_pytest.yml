@@ -50,17 +50,22 @@ jobs:
       - name: Run tests
         env:
           HDF5_USE_FILE_LOCKING: "FALSE"
+          PYTHONUNBUFFERED: "1"
         run: |
           # Debug: Test reading NetCDF files
-          python << 'EOF'
+          python -u << 'EOF'
+          import sys
           import imas
           from pathlib import Path
           
-          print("=" * 60)
-          print("DEBUG: Testing NetCDF file reading")
-          print("=" * 60)
+          sys.stdout.flush()
+          print("=" * 60, flush=True)
+          print("DEBUG: Testing NetCDF file reading", flush=True)
+          print("=" * 60, flush=True)
           
           tests_dir = Path("tests")
+          print(f"Tests directory: {tests_dir}", flush=True)
+          print(f"Files in tests directory: {list(tests_dir.glob('*.nc'))}", flush=True)
           
           # Test NetCDF files
           netcdf_files = [
@@ -72,25 +77,24 @@ jobs:
           
           for filename in netcdf_files:
               filepath = tests_dir / filename
-              print(f"Checking: {filepath}")
+              print(f"Checking: {filepath}", flush=True)
               if filepath.exists():
                   size = filepath.stat().st_size / (1024**2)
-                  print(f"\n✓ File exists: {filename} ({size:.2f} MB)")
+                  print(f"✓ File exists: {filename} ({size:.2f} MB)", flush=True)
                   try:
                       conn = imas.DBEntry(str(filepath), "r")
-                      print(f"  - Successfully opened with IMAS")
+                      print(f"  - Successfully opened with IMAS", flush=True)
                       conn.close()
                   except Exception as e:
-                      print(f"  - ERROR opening with IMAS: {e}")
+                      print(f"  - ERROR opening with IMAS: {e}", flush=True)
               else:
-                  print(f"\n✗ File NOT found: {filename}")
+                  print(f"✗ File NOT found: {filename}", flush=True)
           
-          print("\n" + "=" * 60)
-          
+          print("=" * 60, flush=True)
           EOF
           
-          # Run pytest
-          python -m pytest tests/ -v -s --tb=short --cov=idstools --cov-report=term-missing --cov-report=xml:coverage.xml --cov-report=html:htmlcov --junit-xml=junit.xml
+          # Run pytest with verbose output
+          python -m pytest tests/ -v -s --tb=short --junit-xml=junit.xml
 
       - name: Upload coverage report ${{ matrix.python-version }}
         uses: actions/upload-artifact@v4
