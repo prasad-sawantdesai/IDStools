@@ -34,15 +34,45 @@ jobs:
         run: |
           mkdir -p tests
           cd tests
-          wget -q "https://zenodo.org/records/17062700/files/iter_disruption_113112_1.nc" -O iter_disruption_113112_1.nc
-          wget -q "https://zenodo.org/records/17062700/files/iter_scenario_123364_1.nc" -O iter_scenario_123364_1.nc
-          wget -q "https://zenodo.org/records/17062700/files/iter_scenario_53298_seq1_DD3.nc" -O iter_scenario_53298_seq1_DD3.nc
-          wget -q "https://zenodo.org/records/17062700/files/iter_scenario_53298_seq1_DD4.nc" -O iter_scenario_53298_seq1_DD4.nc
+          
+          # Function to download with retries
+          download_with_retry() {
+            local url=$1
+            local output=$2
+            local max_retries=5
+            local attempt=1
+            
+            while [ $attempt -le $max_retries ]; do
+              echo "Downloading $output (attempt $attempt/$max_retries)..."
+              if wget -L -T 30 --tries=3 "$url" -O "$output" 2>&1; then
+                size=$(stat -f%z "$output" 2>/dev/null || stat -c%s "$output" 2>/dev/null)
+                if [ "$size" -gt 1000000 ]; then
+                  echo "✓ Downloaded: $output (size: $size bytes)"
+                  return 0
+                else
+                  echo "⚠ File too small ($size bytes), retrying..."
+                  rm -f "$output"
+                fi
+              else
+                echo "✗ Download failed, retrying..."
+              fi
+              attempt=$((attempt + 1))
+              sleep 3
+            done
+            
+            echo "✗ Failed to download $output after $max_retries attempts"
+            return 1
+          }
+          
+          # Download all files
+          download_with_retry "https://zenodo.org/records/17062700/files/iter_disruption_113112_1.nc" "iter_disruption_113112_1.nc" || exit 1
+          download_with_retry "https://zenodo.org/records/17062700/files/iter_scenario_123364_1.nc" "iter_scenario_123364_1.nc" || exit 1
+          download_with_retry "https://zenodo.org/records/17062700/files/iter_scenario_53298_seq1_DD3.nc" "iter_scenario_53298_seq1_DD3.nc" || exit 1
+          download_with_retry "https://zenodo.org/records/17062700/files/iter_scenario_53298_seq1_DD4.nc" "iter_scenario_53298_seq1_DD4.nc" || exit 1
+          
           ls -lh *.nc
 
       - name: Run tests
-        env:
-          HDF5_USE_FILE_LOCKING: "FALSE"
         run: |
           # Debug: Test reading NetCDF files
           python << 'EOF'
