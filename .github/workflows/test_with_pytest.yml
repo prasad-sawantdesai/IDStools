@@ -34,10 +34,17 @@ jobs:
         run: |
           mkdir -p tests
           cd tests
-          wget "https://zenodo.org/records/17062700/files/iter_disruption_113112_1.nc" -O iter_disruption_113112_1.nc
-          wget "https://zenodo.org/records/17062700/files/iter_scenario_123364_1.nc" -O iter_scenario_123364_1.nc
-          wget "https://zenodo.org/records/17062700/files/iter_scenario_53298_seq1_DD3.nc" -O iter_scenario_53298_seq1_DD3.nc
-          wget "https://zenodo.org/records/17062700/files/iter_scenario_53298_seq1_DD4.nc" -O iter_scenario_53298_seq1_DD4.nc
+          
+          # Download with retry on 503 errors
+          for i in 1 2 3 4 5; do
+            echo "Download attempt $i/5..."
+            wget --retry-connrefused --waitretry=5 --timeout=30 -t 3 "https://zenodo.org/records/17062700/files/iter_disruption_113112_1.nc" -O iter_disruption_113112_1.nc && \
+            wget --retry-connrefused --waitretry=5 --timeout=30 -t 3 "https://zenodo.org/records/17062700/files/iter_scenario_123364_1.nc" -O iter_scenario_123364_1.nc && \
+            wget --retry-connrefused --waitretry=5 --timeout=30 -t 3 "https://zenodo.org/records/17062700/files/iter_scenario_53298_seq1_DD3.nc" -O iter_scenario_53298_seq1_DD3.nc && \
+            wget --retry-connrefused --waitretry=5 --timeout=30 -t 3 "https://zenodo.org/records/17062700/files/iter_scenario_53298_seq1_DD4.nc" -O iter_scenario_53298_seq1_DD4.nc && \
+            break || { echo "Download failed, waiting 30s before retry..."; sleep 30; }
+          done
+          
           ls -lh *.nc
 
       - name: Run tests
