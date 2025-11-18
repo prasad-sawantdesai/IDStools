@@ -29,13 +29,19 @@ class TestIDSListScript:
         return run_idstools_script("idslist", args, timeout=timeout)
 
     def test_idslist_default_mode(self, test_file_path):
+        logger.info(f"Testing with file: {test_file_path}")
+        logger.info(f"File exists: {Path(test_file_path).exists()}")
+        
         result = self.run_idslist(["--uri", test_file_path])
+        
+        logger.info(f"Return code: {result.returncode}")
+        logger.info(f"STDOUT:\n{result.stdout}")
+        logger.info(f"STDERR:\n{result.stderr}")
 
-        # Check for HDF5 errors and skip if found
-        if "NetCDF: HDF error" in result.stdout or "Errno -101" in result.stdout:
-            pytest.skip(f"HDF5 read error on {test_file_path}: file may be corrupted in CI environment")
-
-        assert result.returncode == 0
+        # Always raise error, don't skip
+        if result.returncode != 0:
+            raise AssertionError(f"Command failed with return code {result.returncode}\nSTDOUT: {result.stdout}\nSTDERR: {result.stderr}")
+        
         assert "List of IDSes" in result.stdout
         assert "IDS" in result.stdout
         assert "SLICES" in result.stdout
