@@ -44,7 +44,7 @@ jobs:
         env:
           HDF5_USE_FILE_LOCKING: "FALSE"
         run: |
-          python -m pytest -n=auto --cov=idstools --cov-report=term-missing --cov-report=xml:coverage.xml --cov-report=html:htmlcov --junit-xml=junit.xml
+          python -m pytest -n=1 --cov=idstools --cov-report=term-missing --cov-report=xml:coverage.xml --cov-report=html:htmlcov --junit-xml=junit.xml
 
       - name: Upload coverage report ${{ matrix.python-version }}
         uses: actions/upload-artifact@v4
