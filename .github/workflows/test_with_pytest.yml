@@ -44,7 +44,43 @@ jobs:
         env:
           HDF5_USE_FILE_LOCKING: "FALSE"
         run: |
-          python -m pytest -n=1 --cov=idstools --cov-report=term-missing --cov-report=xml:coverage.xml --cov-report=html:htmlcov --junit-xml=junit.xml
+          # Debug: Test reading NetCDF files
+          python << 'EOF'
+          import imas
+          from pathlib import Path
+          
+          print("=" * 60)
+          print("DEBUG: Testing NetCDF file reading")
+          print("=" * 60)
+          
+          tests_dir = Path("tests")
+          
+          # Test NetCDF files
+          netcdf_files = [
+              "iter_disruption_113112_1.nc",
+              "iter_scenario_123364_1.nc",
+              "iter_scenario_53298_seq1_DD3.nc",
+              "iter_scenario_53298_seq1_DD4.nc"
+          ]
+          
+          for filename in netcdf_files:
+              filepath = tests_dir / filename
+              print(f"Checking: {filepath}")
+              if filepath.exists():
+                  size = filepath.stat().st_size / (1024**2)
+                  print(f"\n✓ File exists: {filename} ({size:.2f} MB)")
+                  try:
+                      conn = imas.DBEntry(str(filepath), "r")
+                      print(f"  - Successfully opened with IMAS")
+                      conn.close()
+                  except Exception as e:
+                      print(f"  - ERROR opening with IMAS: {e}")
+              else:
+                  print(f"\n✗ File NOT found: {filename}")
+          
+          print("\n" + "=" * 60)
+          
+          EOF
 
       - name: Upload coverage report ${{ matrix.python-version }}
         uses: actions/upload-artifact@v4
