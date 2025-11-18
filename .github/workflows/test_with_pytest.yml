@@ -73,6 +73,8 @@ jobs:
           ls -lh *.nc
 
       - name: Run tests
+        env:
+          HDF5_USE_FILE_LOCKING: "FALSE"
         run: |
           # Debug: Test reading NetCDF files
           python << 'EOF'
@@ -111,6 +113,9 @@ jobs:
           print("\n" + "=" * 60)
           
           EOF
+          
+          # Run pytest
+          python -m pytest tests/ -v --tb=short --cov=idstools --cov-report=term-missing --cov-report=xml:coverage.xml --cov-report=html:htmlcov --junit-xml=junit.xml
 
       - name: Upload coverage report ${{ matrix.python-version }}
         uses: actions/upload-artifact@v4
