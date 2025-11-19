@@ -7,6 +7,7 @@ import subprocess
 import shutil
 import time
 import yaml
+import gc
 from pathlib import Path
 from functools import wraps, lru_cache
 
@@ -70,17 +71,33 @@ if _TEST_CONFIG and "netcdf_files" in _TEST_CONFIG:
     TEST_FILES_URLS = _TEST_CONFIG["netcdf_files"]
 
 
-@lru_cache(maxsize=128)
 def _get_available_ids_cached(test_file_path):
+    """
+    Get available IDS in a test file.
+    
+    NOTE: We do NOT use @lru_cache here because it keeps references to file handles
+    and prevents proper cleanup, causing file locking issues on subsequent accesses.
+    Each call must open and close the file fresh.
+    """
     import imas
     from idstools.utils.idshelper import get_available_ids_and_occurrences
+    import gc
 
-    connection = imas.DBEntry(test_file_path, "r")
-    available_ids = get_available_ids_and_occurrences(connection)
-    available_ids_set = frozenset(ids_type for ids_type, *_ in available_ids)
-    connection.close()
-
-    return available_ids_set
+    connection = None
+    try:
+        connection = imas.DBEntry(test_file_path, "r")
+        available_ids = get_available_ids_and_occurrences(connection)
+        available_ids_set = frozenset(ids_type for ids_type, *_ in available_ids)
+        return available_ids_set
+    finally:
+        # Explicitly close connection and force garbage collection
+        if connection is not None:
+            try:
+                connection.close()
+            except Exception as e:
+                logger.warning(f"Error closing IMAS connection: {e}")
+        # Force garbage collection to ensure file handles are released
+        gc.collect()
 
 
 def require_ids(*ids_names, require_all=False):
@@ -209,6 +226,8 @@ def check_result_skip_if_empty_or_error(result, skip_patterns=None):
 
 
 def run_idstools_script(script_name, args, timeout=30):
+    import gc
+    
     script_cmd = shutil.which(script_name)
 
     if script_cmd:
@@ -231,6 +250,9 @@ def run_idstools_script(script_name, args, timeout=30):
     if result.stderr:
         logger.debug(f"\n--- STDERR ---\n{result.stderr[:500]}")
     logger.debug(f"{'='*60}\n")
+
+    # Force garbage collection after subprocess to ensure file handles are released
+    gc.collect()
 
     return result
 
