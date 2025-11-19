@@ -32,10 +32,6 @@ class TestIDSPrintScript:
     def test_idsprint_list_available_ids(self, test_file_path):
         result = self.run_idsprint(["--uri", test_file_path])
 
-        # Check for HDF5 errors and skip if found
-        if "NetCDF: HDF error" in result.stdout or "Errno -101" in result.stdout:
-            pytest.skip(f"HDF5 read error on {test_file_path}: file may be corrupted in CI environment")
-
         assert result.returncode == 1
         assert "summary" in result.stdout
 

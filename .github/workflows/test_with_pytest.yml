@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.11"]  # Test on multiple Python versions
+        python-version: ["3.8","3.9", "3.10", "3.11", "3.12"]  # Test on multiple Python versions
     
     steps:
       - name: Checkout repository
@@ -31,12 +31,8 @@ jobs:
           pip install .[test]
 
       - name: Run tests
-        env:
-          HDF5_USE_FILE_LOCKING: "FALSE"
-          PYTHONUNBUFFERED: "1"
-          CI: "true"
         run: |
-          python -m pytest tests/ -v -s --tb=short --junit-xml=junit.xml -n 0
+          python -m pytest -n=auto --cov=idstools --cov-report=term-missing --cov-report=xml:coverage.xml --cov-report=html:htmlcov --junit-xml=junit.xml
 
       - name: Upload coverage report ${{ matrix.python-version }}
         uses: actions/upload-artifact@v4

@@ -79,37 +79,11 @@ def _get_available_ids(test_file_path):
     Each call must open and close the file fresh.
     """
     import imas
-    import gc
-    import random
     from idstools.utils.idshelper import get_available_ids_and_occurrences
 
     connection = None
-    
-    # Add a small random delay in CI to reduce race conditions
-    # when multiple tests try to open the same file simultaneously
-    if os.environ.get('CI'):
-        time.sleep(random.uniform(0.01, 0.1))
-    
     try:
-        # Try multiple times with exponential backoff for file locking issues
-        max_attempts = 3
-        for attempt in range(max_attempts):
-            try:
-                connection = imas.DBEntry(test_file_path, "r")
-                break
-            except OSError as e:
-                if "NetCDF: HDF error" in str(e) or "Errno -101" in str(e):
-                    if attempt < max_attempts - 1:
-                        wait_time = 0.5 * (2 ** attempt)  # Exponential backoff: 0.5s, 1s, 2s
-                        logger.warning(f"Attempt {attempt + 1}/{max_attempts} failed to open {test_file_path}: {e}. Retrying in {wait_time}s...")
-                        time.sleep(wait_time)
-                        gc.collect()  # Force cleanup before retry
-                    else:
-                        logger.error(f"Failed to open {test_file_path} after {max_attempts} attempts")
-                        raise
-                else:
-                    raise
-        
+        connection = imas.DBEntry(test_file_path, "r")
         available_ids = get_available_ids_and_occurrences(connection)
         available_ids_set = frozenset(ids_type for ids_type, *_ in available_ids)
         return available_ids_set
@@ -120,9 +94,6 @@ def _get_available_ids(test_file_path):
                 connection.close()
             except Exception as e:
                 logger.warning(f"Error closing IMAS connection: {e}")
-        # Force garbage collection to release file handles immediately
-        # This is especially important in CI environments like GitHub Actions
-        gc.collect()
 
 
 def require_ids(*ids_names, require_all=False):
@@ -205,8 +176,6 @@ def skip_on_error_or_empty(error_patterns=None):
             "has no attribute",
             "ERROR",
             "numpy.ndarray|(0,)|",
-            "NetCDF: HDF error",
-            "Errno -101",
         ]
 
     def decorator(func):
@@ -221,11 +190,6 @@ def skip_on_error_or_empty(error_patterns=None):
             except Exception as e:
                 logger.error(f"Error checking IDS: {e}", exc_info=True)
                 raise AssertionError(f"Could not check for IDS: {e}") from e
-                # error_msg = str(e)
-                # for pattern in error_patterns:
-                #     if pattern.lower() in error_msg.lower():
-                #         pytest.skip(f"Skipping due to data issue: {pattern}")
-                # raise
 
         return wrapper
 
@@ -238,8 +202,6 @@ def check_result_skip_if_empty_or_error(result, skip_patterns=None):
             "path/value does not exist",
             "has no attribute",
             "numpy.ndarray|(0,)|float64",
-            "NetCDF: HDF error",  # Skip on HDF5 read errors
-            "Errno -101",  # NetCDF HDF5 error code
         ]
 
     output = result.stdout + result.stderr
