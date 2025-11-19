@@ -1,8 +1,6 @@
 """Pytest configuration for idstools tests."""
 
 import pytest
-import gc
-import os
 
 
 def _print_library_versions():
@@ -101,16 +99,6 @@ def pytest_generate_tests(metafunc):
 @pytest.fixture(autouse=True)
 def cleanup_file_handles():
     """
-    Automatically cleanup file handles and file locks after each test.
-    
-    This fixture ensures that IMAS connections and HDF5 file handles are properly
-    released after each test, preventing file locking issues on subsequent test runs.
+    Automatically cleanup file handles after each test.
     """
     yield
-    
-    # Force garbage collection after test to release file handles
-    gc.collect()
-    
-    # Also disable HDF5 file locking during tests to reduce locking issues
-    if os.environ.get("HDF5_USE_FILE_LOCKING") is None:
-        os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"

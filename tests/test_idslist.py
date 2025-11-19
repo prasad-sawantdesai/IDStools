@@ -1,20 +1,11 @@
 import pytest
-import subprocess
-import tempfile
-import shutil
-import logging
-from pathlib import Path
 
 from test_utils import (
     require_ids,
     TEST_FILES,
-    TESTS_DIR,
     _resolve_test_uri,
-    check_result_skip_if_empty_or_error,
     run_idstools_script,
 )
-
-logger = logging.getLogger(__name__)
 
 
 class TestIDSListScript:
@@ -29,14 +20,7 @@ class TestIDSListScript:
         return run_idstools_script("idslist", args, timeout=timeout)
 
     def test_idslist_default_mode(self, test_file_path):
-        logger.info(f"Testing with file: {test_file_path}")
-        logger.info(f"File exists: {Path(test_file_path).exists()}")
-        
         result = self.run_idslist(["--uri", test_file_path])
-        
-        logger.info(f"Return code: {result.returncode}")
-        logger.info(f"STDOUT:\n{result.stdout}")
-        logger.info(f"STDERR:\n{result.stderr}")
 
         # Always raise error, don't skip
         if result.returncode != 0:
