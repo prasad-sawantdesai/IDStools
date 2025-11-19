@@ -1,6 +1,10 @@
 """Pytest configuration for idstools tests."""
 
 import pytest
+import os
+
+# Ensure HDF5 file locking is disabled at module import time
+os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
 
 
 def _print_library_versions():
@@ -103,8 +107,22 @@ def cleanup_file_handles():
     """
     yield
     
-    # Give subprocesses time to exit and release file handles
+    # Aggressive cleanup: give subprocesses time to exit and release file handles
     import time
     import gc
-    time.sleep(0.5)
+    import sys
+    
+    # Force flush and garbage collect multiple times
+    for _ in range(3):
+        gc.collect()
+    
+    # Flush stdout/stderr
+    sys.stdout.flush()
+    sys.stderr.flush()
+    
+    # Wait longer for OS to release file descriptors
+    # This is critical for HDF5 files which have complex internal state
+    time.sleep(2.0)
+    
+    # Final garbage collection
     gc.collect()
