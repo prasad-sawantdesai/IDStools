@@ -159,7 +159,9 @@ def require_files(*file_uris):
         @pytest.mark.parametrize("test_file_path", file_list)
         @wraps(func)
         def wrapper(self, test_file_path, *args, **kwargs):
-            return func(self, test_file_path, *args, **kwargs)
+            # Resolve the URI to absolute path before passing to the test
+            resolved_path = _resolve_test_uri(test_file_path)
+            return func(self, resolved_path, *args, **kwargs)
 
         return wrapper
 
