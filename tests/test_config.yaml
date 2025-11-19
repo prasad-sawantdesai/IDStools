@@ -17,8 +17,6 @@ profiles:
   # Local development profile - uses NetCDF files (downloaded if not present)
   local:
     uris:
-      - "iter_disruption_113112_1.nc"
-      - "iter_scenario_123364_1.nc"
       - "iter_scenario_53298_seq1_DD3.nc"
       - "iter_scenario_53298_seq1_DD4.nc"
 
@@ -31,8 +29,6 @@ profiles:
   # CI/CD profile - uses NetCDF files (downloaded in GitHub workflows before tests)
   ci:
     uris:
-      - "iter_disruption_113112_1.nc"
-      - "iter_scenario_123364_1.nc"
       - "iter_scenario_53298_seq1_DD3.nc"
       - "iter_scenario_53298_seq1_DD4.nc"
 
