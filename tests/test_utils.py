@@ -8,7 +8,7 @@ import shutil
 import time
 import yaml
 from pathlib import Path
-from functools import wraps, lru_cache
+from functools import wraps
 
 logger = logging.getLogger(__name__)
 
@@ -70,7 +70,7 @@ if _TEST_CONFIG and "netcdf_files" in _TEST_CONFIG:
     TEST_FILES_URLS = _TEST_CONFIG["netcdf_files"]
 
 
-def _get_available_ids_cached(test_file_path):
+def _get_available_ids(test_file_path):
     """
     Get available IDS in a test file.
     
@@ -101,7 +101,7 @@ def require_ids(*ids_names, require_all=False):
         @wraps(func)
         def wrapper(self, test_file_path, *args, **kwargs):
             try:
-                available_ids_set = _get_available_ids_cached(test_file_path)
+                available_ids_set = _get_available_ids(test_file_path)
 
                 if require_all:
                     missing_ids = [ids_name for ids_name in ids_names if ids_name not in available_ids_set]

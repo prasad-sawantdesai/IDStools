@@ -91,6 +91,22 @@ jobs:
                   print(f"✗ File NOT found: {filename}", flush=True)
           
           print("=" * 60, flush=True)
+          for filename in netcdf_files:
+              filepath = tests_dir / filename
+              print(f"Checking: {filepath}", flush=True)
+              if filepath.exists():
+                  size = filepath.stat().st_size / (1024**2)
+                  print(f"✓ File exists: {filename} ({size:.2f} MB)", flush=True)
+                  try:
+                      conn = imas.DBEntry(str(filepath), "r")
+                      print(f"  - Successfully opened with IMAS", flush=True)
+                      conn.close()
+                  except Exception as e:
+                      print(f"  - ERROR opening with IMAS: {e}", flush=True)
+              else:
+                  print(f"✗ File NOT found: {filename}", flush=True)
+          
+          print("=" * 60, flush=True)
           EOF
           
           # Run pytest with verbose output
