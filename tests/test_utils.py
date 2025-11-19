@@ -79,6 +79,7 @@ def _get_available_ids(test_file_path):
     Each call must open and close the file fresh.
     """
     import imas
+    import gc
     from idstools.utils.idshelper import get_available_ids_and_occurrences
 
     connection = None
@@ -94,6 +95,9 @@ def _get_available_ids(test_file_path):
                 connection.close()
             except Exception as e:
                 logger.warning(f"Error closing IMAS connection: {e}")
+        # Force garbage collection to release file handles immediately
+        # This is especially important in CI environments like GitHub Actions
+        gc.collect()
 
 
 def require_ids(*ids_names, require_all=False):
