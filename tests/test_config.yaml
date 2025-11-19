@@ -18,7 +18,6 @@ profiles:
   local:
     uris:
       - "iter_scenario_53298_seq1_DD3.nc"
-      - "iter_scenario_53298_seq1_DD4.nc"
 
   # IMAS database profile - uses direct IMAS HDF5 URIs (no downloads)
   imas:
@@ -30,7 +29,6 @@ profiles:
   ci:
     uris:
       - "iter_scenario_53298_seq1_DD3.nc"
-      - "iter_scenario_53298_seq1_DD4.nc"
 
 # Default profile if TEST_PROFILE is not set
 default_profile: "local"
