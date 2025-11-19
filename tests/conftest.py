@@ -102,3 +102,9 @@ def cleanup_file_handles():
     Automatically cleanup file handles after each test.
     """
     yield
+    
+    # Give subprocesses time to exit and release file handles
+    import time
+    import gc
+    time.sleep(0.5)
+    gc.collect()

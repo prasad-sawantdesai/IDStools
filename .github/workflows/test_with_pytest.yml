@@ -52,7 +52,7 @@ jobs:
           HDF5_USE_FILE_LOCKING: "FALSE"
           PYTHONUNBUFFERED: "1"
         run: |
-          # Debug: Test reading NetCDF files
+          # Verify files before pytest
           python -u << 'EOF'
           import sys
           import imas
@@ -60,14 +60,10 @@ jobs:
           
           sys.stdout.flush()
           print("=" * 60, flush=True)
-          print("DEBUG: Testing NetCDF file reading", flush=True)
+          print("PRE-TEST: Verifying NetCDF files", flush=True)
           print("=" * 60, flush=True)
           
           tests_dir = Path("tests")
-          print(f"Tests directory: {tests_dir}", flush=True)
-          print(f"Files in tests directory: {list(tests_dir.glob('*.nc'))}", flush=True)
-          
-          # Test NetCDF files
           netcdf_files = [
               "iter_disruption_113112_1.nc",
               "iter_scenario_123364_1.nc",
@@ -80,32 +76,20 @@ jobs:
               print(f"Checking: {filepath}", flush=True)
               if filepath.exists():
                   size = filepath.stat().st_size / (1024**2)
-                  print(f"✓ File exists: {filename} ({size:.2f} MB)", flush=True)
+                  print(f"  ✓ File exists: {size:.2f} MB", flush=True)
                   try:
                       conn = imas.DBEntry(str(filepath), "r")
-                      print(f"  - Successfully opened with IMAS", flush=True)
+                      print(f"  ✓ Successfully opened with IMAS", flush=True)
                       conn.close()
                   except Exception as e:
-                      print(f"  - ERROR opening with IMAS: {e}", flush=True)
+                      print(f"  ✗ ERROR opening with IMAS: {e}", flush=True)
+                      raise
               else:
-                  print(f"✗ File NOT found: {filename}", flush=True)
+                  print(f"  ✗ File NOT found", flush=True)
+                  raise FileNotFoundError(f"Missing: {filepath}")
           
           print("=" * 60, flush=True)
-          for filename in netcdf_files:
-              filepath = tests_dir / filename
-              print(f"Checking: {filepath}", flush=True)
-              if filepath.exists():
-                  size = filepath.stat().st_size / (1024**2)
-                  print(f"✓ File exists: {filename} ({size:.2f} MB)", flush=True)
-                  try:
-                      conn = imas.DBEntry(str(filepath), "r")
-                      print(f"  - Successfully opened with IMAS", flush=True)
-                      conn.close()
-                  except Exception as e:
-                      print(f"  - ERROR opening with IMAS: {e}", flush=True)
-              else:
-                  print(f"✗ File NOT found: {filename}", flush=True)
-          
+          print("All files verified successfully!", flush=True)
           print("=" * 60, flush=True)
           EOF
           
