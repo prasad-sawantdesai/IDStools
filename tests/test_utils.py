@@ -22,8 +22,8 @@ def _load_test_config():
     if not config_path.exists():
         logger.warning(f"Test config not found at {config_path}, using defaults")
         return None
-    
-    with open(config_path, 'r') as f:
+
+    with open(config_path, "r") as f:
         return yaml.safe_load(f)
 
 
@@ -31,12 +31,12 @@ def _get_test_profile():
     """Get the active test profile from environment or config default."""
     profile = os.environ.get("TEST_PROFILE", None)
     config = _load_test_config()
-    
+
     if profile is None and config:
         profile = config.get("default_profile", "local")
     elif profile is None:
         profile = "local"
-    
+
     return profile
 
 
@@ -45,14 +45,14 @@ def _get_test_uris_from_config():
     config = _load_test_config()
     if not config:
         return []
-    
+
     profile = _get_test_profile()
     profile_config = config.get("profiles", {}).get(profile)
-    
+
     if not profile_config:
         logger.warning(f"Profile '{profile}' not found in config, using local profile")
         profile_config = config.get("profiles", {}).get("local", {})
-    
+
     return profile_config.get("uris", [])
 
 
@@ -73,7 +73,7 @@ if _TEST_CONFIG and "netcdf_files" in _TEST_CONFIG:
 def _get_available_ids(test_file_path):
     """
     Get available IDS in a test file.
-    
+
     NOTE: We do NOT use @lru_cache here because it keeps references to file handles
     and prevents proper cleanup, causing file locking issues on subsequent accesses.
     Each call must open and close the file fresh.
@@ -139,20 +139,6 @@ def require_files(*file_uris):
     return decorator
 
 
-def create_test_file_fixture(test_uris=None):
-    """Create a pytest fixture that provides test URIs (NetCDF or IMAS)."""
-    if test_uris is None:
-        test_uris = TEST_URIS
-    
-    @pytest.fixture(params=test_uris)
-    def test_file_path_fixture(request):
-        uri = request.param
-        # Resolve URI to absolute path (for NetCDF) or return IMAS URI as-is
-        return _resolve_test_uri(uri)
-
-    return test_file_path_fixture
-
-
 def require_summary(func):
     return require_ids("summary")(func)
 
@@ -169,33 +155,6 @@ def require_edge_profiles(func):
     return require_ids("edge_profiles")(func)
 
 
-def skip_on_error_or_empty(error_patterns=None):
-    if error_patterns is None:
-        error_patterns = [
-            "path/value does not exist",
-            "has no attribute",
-            "ERROR",
-            "numpy.ndarray|(0,)|",
-        ]
-
-    def decorator(func):
-        @wraps(func)
-        def wrapper(*args, **kwargs):
-            try:
-                result = func(*args, **kwargs)
-                return result
-            except AssertionError as e:
-                error_msg = str(e)
-                raise
-            except Exception as e:
-                logger.error(f"Error checking IDS: {e}", exc_info=True)
-                raise AssertionError(f"Could not check for IDS: {e}") from e
-
-        return wrapper
-
-    return decorator
-
-
 def check_result_skip_if_empty_or_error(result, skip_patterns=None):
     if skip_patterns is None:
         skip_patterns = [
@@ -210,18 +169,21 @@ def check_result_skip_if_empty_or_error(result, skip_patterns=None):
         if pattern in output:
             pytest.skip(f"Skipping test: data is empty or has errors (found: {pattern})")
 
-    if "ERROR" in result.stderr:
-        pytest.skip(f"Skipping test: command produced ERROR in stderr")
-
 
 def run_idstools_script(script_name, args, timeout=30):
     script_cmd = shutil.which(script_name)
 
     if script_cmd:
-        cmd = [script_name] + args
+        cmd = [script_cmd] + args
     else:
+        # Script not in PATH (common in editable installs), run with python
         script_path = Path(__file__).parent.parent / "scripts" / script_name
-        cmd = [str(script_path)] + args
+        if not script_path.exists():
+            raise FileNotFoundError(f"Script not found: {script_path}")
+        # Use sys.executable to get the current Python interpreter
+        import sys
+
+        cmd = [sys.executable, str(script_path)] + args
 
     logger.debug(f"\n{'='*60}")
     logger.debug(f"Running command: {' '.join(cmd)}")
@@ -252,13 +214,13 @@ def _resolve_test_uri(uri):
     else:
         # NetCDF file path - resolve to absolute path in tests directory
         abs_path = TESTS_DIR / uri
-        
+
         # Check if file exists
         if abs_path.exists():
             file_size = abs_path.stat().st_size
             logger.info(f"Test file found: {abs_path} (size: {file_size / (1024**2):.2f} MB)")
             return str(abs_path)
-        
+
         # File not found, try to download it
         if uri in TEST_FILES_URLS:
             logger.info(f"Test file not found locally: {abs_path}")
@@ -276,9 +238,9 @@ def _download_test_file(filename, abs_path, url, max_retries=3, retry_delay=2):
         try:
             # Use urllib with timeout
             with urllib.request.urlopen(url, timeout=300) as response:
-                with open(abs_path, 'wb') as out_file:
+                with open(abs_path, "wb") as out_file:
                     out_file.write(response.read())
-            
+
             # Verify file was downloaded
             if abs_path.exists():
                 file_size = abs_path.stat().st_size
@@ -286,7 +248,7 @@ def _download_test_file(filename, abs_path, url, max_retries=3, retry_delay=2):
                 return
             else:
                 raise RuntimeError(f"Download completed but file not found: {abs_path}")
-                
+
         except urllib.error.URLError as e:
             logger.warning(f"Download attempt {attempt} failed with network error: {e}")
             try:
@@ -294,13 +256,13 @@ def _download_test_file(filename, abs_path, url, max_retries=3, retry_delay=2):
                     abs_path.unlink()
             except Exception:
                 pass
-            
+
             if attempt == max_retries:
                 raise RuntimeError(f"Could not download test file after {max_retries} attempts: {filename}. Error: {e}")
-            
+
             # Wait before retry
             time.sleep(retry_delay)
-            
+
         except Exception as e:
             logger.warning(f"Download attempt {attempt} failed: {e}")
             try:
@@ -308,9 +270,63 @@ def _download_test_file(filename, abs_path, url, max_retries=3, retry_delay=2):
                     abs_path.unlink()
             except Exception:
                 pass
-            
+
             if attempt == max_retries:
                 raise RuntimeError(f"Could not download test file after {max_retries} attempts: {filename}. Error: {e}")
-            
+
             # Wait before retry
             time.sleep(retry_delay)
+
+
+def verify_test_files_accessible():
+    """
+    Verify that all configured test files are present and accessible with IMAS.
+    This is a utility function that can be called by tests to ensure prerequisites.
+    """
+    import imas
+    from idstools.utils.idshelper import get_available_ids_and_occurrences
+
+    if not TEST_FILES:
+        logger.warning("No test files configured in TEST_FILES")
+        return []
+
+    accessible_files = []
+    inaccessible_files = []
+
+    for test_file in TEST_FILES:
+        try:
+            # Resolve the URI (download if needed)
+            resolved_path = _resolve_test_uri(test_file)
+
+            # Try to open with IMAS
+            connection = None
+            try:
+                connection = imas.DBEntry(resolved_path, "r")
+                available_ids = get_available_ids_and_occurrences(connection)
+                accessible_files.append(
+                    {
+                        "file": test_file,
+                        "path": resolved_path,
+                        "ids_count": len(available_ids),
+                        "status": "✓ accessible",
+                    }
+                )
+                logger.info(f"✓ Test file accessible: {test_file} ({len(available_ids)} IDS)")
+            finally:
+                if connection is not None:
+                    try:
+                        connection.close()
+                    except Exception as e:
+                        logger.warning(f"Error closing IMAS connection: {e}")
+
+        except Exception as e:
+            inaccessible_files.append({"file": test_file, "error": str(e), "status": "✗ inaccessible"})
+            logger.error(f"✗ Test file NOT accessible: {test_file} - Error: {e}")
+
+    return {
+        "accessible": accessible_files,
+        "inaccessible": inaccessible_files,
+        "total": len(TEST_FILES),
+        "accessible_count": len(accessible_files),
+        "inaccessible_count": len(inaccessible_files),
+    }

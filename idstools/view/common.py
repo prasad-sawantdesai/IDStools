@@ -5,13 +5,17 @@ import importlib.util
 
 import matplotlib
 
+# Always use non-GUI backend in headless environments or when tkinter is not available
 if "DISPLAY" not in os.environ:
     matplotlib.use("agg")
 else:
-    tkinter_available = importlib.util.find_spec("tkinter") is not None
-    if tkinter_available:
-        matplotlib.use("TKagg")
-    else:
+    # Check if tkinter is available
+    try:
+        import tkinter
+
+        matplotlib.use("TkAgg")
+    except (ImportError, ModuleNotFoundError):
+        # tkinter not available, use non-GUI backend
         matplotlib.use("agg")
 
 import matplotlib.pyplot as plt

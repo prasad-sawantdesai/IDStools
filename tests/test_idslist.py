@@ -24,8 +24,10 @@ class TestIDSListScript:
 
         # Always raise error, don't skip
         if result.returncode != 0:
-            raise AssertionError(f"Command failed with return code {result.returncode}\nSTDOUT: {result.stdout}\nSTDERR: {result.stderr}")
-        
+            raise AssertionError(
+                f"Command failed with return code {result.returncode}\nSTDOUT: {result.stdout}\nSTDERR: {result.stderr}"
+            )
+
         assert "List of IDSes" in result.stdout
         assert "IDS" in result.stdout
         assert "SLICES" in result.stdout
@@ -79,7 +81,6 @@ class TestIDSListScript:
 
         assert result.returncode != 0
         assert result.returncode == 1
-
 
 
 if __name__ == "__main__":
