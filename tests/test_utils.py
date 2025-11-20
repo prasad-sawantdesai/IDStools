@@ -218,7 +218,7 @@ def _resolve_test_uri(uri):
         # Check if file exists and is valid
         if abs_path.exists():
             file_size = abs_path.stat().st_size
-            
+
             # Validate existing file
             if file_size < 1024:
                 logger.warning(f"Existing file {abs_path} is too small ({file_size} bytes), re-downloading...")
@@ -227,6 +227,7 @@ def _resolve_test_uri(uri):
                 # Try to open as NetCDF to verify it's valid
                 try:
                     import netCDF4
+
                     with netCDF4.Dataset(abs_path, "r") as nc:
                         pass  # Just validate we can open it
                     logger.info(f"Test file found and validated: {abs_path} (size: {file_size / (1024**2):.2f} MB)")
@@ -254,7 +255,7 @@ def _download_test_file(filename, abs_path, url, max_retries=3, retry_delay=2):
             with urllib.request.urlopen(url, timeout=300) as response:
                 # Read the entire content
                 content = response.read()
-                
+
                 # Write to file
                 with open(abs_path, "wb") as out_file:
                     out_file.write(content)
@@ -262,24 +263,27 @@ def _download_test_file(filename, abs_path, url, max_retries=3, retry_delay=2):
             # Verify file was downloaded and has content
             if not abs_path.exists():
                 raise RuntimeError(f"Download completed but file not found: {abs_path}")
-            
+
             file_size = abs_path.stat().st_size
-            
+
             # Check if file is not empty
             if file_size == 0:
                 raise RuntimeError(f"Downloaded file is empty: {abs_path}")
-            
+
             # Check if file size is reasonable (at least 1KB for a valid NetCDF)
             if file_size < 1024:
                 raise RuntimeError(f"Downloaded file too small ({file_size} bytes), likely corrupted: {abs_path}")
-            
+
             # Try to validate it's a proper NetCDF file
             try:
                 import netCDF4
+
                 with netCDF4.Dataset(abs_path, "r") as nc:
                     # Just opening and closing is enough to validate format
                     pass
-                logger.info(f"✓ Successfully downloaded and validated {filename} (size: {file_size / (1024**2):.2f} MB)")
+                logger.info(
+                    f"✓ Successfully downloaded and validated {filename} (size: {file_size / (1024**2):.2f} MB)"
+                )
                 return
             except Exception as validate_error:
                 logger.warning(f"Downloaded file failed NetCDF validation: {validate_error}")

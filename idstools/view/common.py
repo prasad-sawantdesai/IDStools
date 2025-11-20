@@ -1,7 +1,6 @@
 import logging
 import os
 import sys
-import importlib.util
 
 import matplotlib
 
@@ -11,7 +10,7 @@ if "DISPLAY" not in os.environ:
 else:
     # Check if tkinter is available
     try:
-        import tkinter
+        import tkinter  # noqa: F401 - imported to check availability
 
         matplotlib.use("TkAgg")
     except (ImportError, ModuleNotFoundError):
